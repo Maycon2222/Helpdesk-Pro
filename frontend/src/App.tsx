@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion, type HTMLMotionProps, type Variants } from "framer-motion";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, BarChart3, Bell, CheckCircle2, CircleUserRound, Clock, Loader2, LogIn, LogOut, MessageSquare, Plus, Search, Shield, SlidersHorizontal, Sparkles, TicketIcon, UserCheck, UserPlus, Users, Zap } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -28,6 +29,103 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+const MotionLink = motion(Link);
+
+const pageVariants: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.32, ease: "easeOut" } },
+  exit: { opacity: 0, y: -8, transition: { duration: 0.18, ease: "easeIn" } }
+};
+
+const staggerContainer: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } }
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 18, scale: 0.98 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.34, ease: "easeOut" } }
+};
+
+const tableRowVariants: Variants = {
+  hidden: { opacity: 0, x: -14 },
+  visible: (index = 0) => ({ opacity: 1, x: 0, transition: { delay: index * 0.035, duration: 0.26, ease: "easeOut" } }),
+  exit: { opacity: 0, x: 12, transition: { duration: 0.16, ease: "easeIn" } }
+};
+
+const ticketPanelVariants: Variants = {
+  hidden: { opacity: 0, x: -34 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.34, ease: "easeOut" } },
+  exit: { opacity: 0, x: 18, transition: { duration: 0.18, ease: "easeIn" } }
+};
+
+const ticketRowVariants: Variants = {
+  hidden: { opacity: 0, x: -48, scale: 0.99 },
+  visible: (index = 0) => ({
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: { delay: index * 0.045, duration: 0.34, ease: "easeOut" }
+  }),
+  exit: { opacity: 0, x: 22, transition: { duration: 0.16, ease: "easeIn" } }
+};
+
+const modalBackdropVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.18, ease: "easeOut" } },
+  exit: { opacity: 0, transition: { duration: 0.14, ease: "easeIn" } }
+};
+
+const modalPanelVariants: Variants = {
+  hidden: { opacity: 0, y: 18, scale: 0.97 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.28, ease: "easeOut" } },
+  exit: { opacity: 0, y: 10, scale: 0.98, transition: { duration: 0.16, ease: "easeIn" } }
+};
+
+function MotionPage({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const reduced = useReducedMotion();
+  if (reduced) return <div className={className}>{children}</div>;
+  return (
+    <motion.div className={className} variants={pageVariants} initial="hidden" animate="visible" exit="exit">
+      {children}
+    </motion.div>
+  );
+}
+
+function MotionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      variants={cardVariants}
+      whileHover={reduced ? undefined : { y: -3, boxShadow: "0 18px 46px rgba(79, 70, 229, 0.14)" }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function TableRowLink({ to, children, className, index }: { to: string; children: React.ReactNode; className: string; index: number }) {
+  const reduced = useReducedMotion();
+  return (
+    <MotionLink
+      layout
+      to={to}
+      custom={index}
+      variants={ticketRowVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      whileHover={reduced ? undefined : { x: 6 }}
+      whileTap={reduced ? undefined : { scale: 0.995 }}
+      className={className}
+    >
+      {children}
+    </MotionLink>
+  );
+}
+
 function Badge({ children, tone }: { children: React.ReactNode; tone: string }) {
   return <span className={cx("inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold shadow-sm ring-1 ring-inset ring-black/5", tone)}>{children}</span>;
 }
@@ -54,17 +152,25 @@ function PriorityBadge({ priority }: { priority: Priority }) {
 }
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "success";
+type ButtonProps = Omit<HTMLMotionProps<"button">, "children"> & {
+  children: React.ReactNode;
+  variant?: ButtonVariant;
+  busy?: boolean;
+};
 
 function Button({
   children,
   variant = "primary",
   busy = false,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; busy?: boolean }) {
+}: ButtonProps) {
+  const reduced = useReducedMotion();
   return (
-    <button
+    <motion.button
       {...props}
       disabled={props.disabled || busy}
+      whileHover={reduced || props.disabled || busy ? undefined : { y: -2, scale: 1.01 }}
+      whileTap={reduced || props.disabled || busy ? undefined : { scale: 0.97 }}
       className={cx(
         "group relative min-h-10 overflow-hidden rounded-md px-4 py-2 text-sm font-bold shadow-sm transition-all duration-200 ease-out",
         "inline-flex w-full items-center justify-center gap-2 sm:w-auto",
@@ -83,7 +189,7 @@ function Button({
         {busy && <Loader2 size={16} className="animate-spin" />}
         {children}
       </span>
-    </button>
+    </motion.button>
   );
 }
 
@@ -192,14 +298,16 @@ function AppLayout() {
           </nav>
         </header>
         <div className="px-4 py-6 lg:px-8">
-          <Routes>
-            <Route path="/dashboard" element={user?.role === "requester" ? <Navigate to="/tickets" replace /> : <DashboardPage />} />
-            <Route path="/tickets" element={<TicketsPage />} />
-            <Route path="/tickets/new" element={<NewTicketPage />} />
-            <Route path="/tickets/:id" element={<TicketDetailPage />} />
-            <Route path="/admin/users" element={user?.role === "admin" ? <UsersPage /> : <Navigate to="/tickets" replace />} />
-            <Route path="*" element={<Navigate to={user?.role === "requester" ? "/tickets" : "/dashboard"} replace />} />
-          </Routes>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/dashboard" element={user?.role === "requester" ? <Navigate to="/tickets" replace /> : <DashboardPage />} />
+              <Route path="/tickets" element={<TicketsPage />} />
+              <Route path="/tickets/new" element={<NewTicketPage />} />
+              <Route path="/tickets/:id" element={<TicketDetailPage />} />
+              <Route path="/admin/users" element={user?.role === "admin" ? <UsersPage /> : <Navigate to="/tickets" replace />} />
+              <Route path="*" element={<Navigate to={user?.role === "requester" ? "/tickets" : "/dashboard"} replace />} />
+            </Routes>
+          </AnimatePresence>
         </div>
       </main>
     </div>
@@ -239,15 +347,15 @@ function LoginPage() {
   return (
     <div className="login-surface flex min-h-screen items-center justify-center bg-gray-950 px-4 py-10">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#4f46e588,transparent_34%),radial-gradient(circle_at_bottom_right,#06b6d466,transparent_30%),linear-gradient(135deg,#111827,#020617)]" />
-      <div className="relative grid w-full max-w-5xl gap-6 lg:grid-cols-[1fr_430px]">
-        <section className="hero-panel flex min-h-[460px] flex-col justify-end rounded-lg border border-white/10 bg-white/8 p-8 text-white shadow-2xl backdrop-blur">
+      <motion.div className="relative grid w-full max-w-5xl gap-6 lg:grid-cols-[1fr_430px]" variants={staggerContainer} initial="hidden" animate="visible">
+        <MotionCard className="hero-panel flex min-h-[460px] flex-col justify-end rounded-lg border border-white/10 bg-white/8 p-8 text-white shadow-2xl backdrop-blur">
           <div className="brand-mark mb-16 inline-flex h-14 w-14 items-center justify-center rounded-lg bg-indigo-500">
             <TicketIcon size={28} />
           </div>
           <h1 className="max-w-xl text-4xl font-extrabold leading-tight">HelpDesk Pro</h1>
           <p className="mt-4 max-w-xl text-base text-indigo-100">Gestão de chamados internos com SLA, histórico, comentários e controle de permissões por perfil.</p>
-        </section>
-        <form onSubmit={submit} className="rounded-lg bg-white/95 p-6 shadow-2xl shadow-indigo-950/30 backdrop-blur">
+        </MotionCard>
+        <motion.form variants={cardVariants} onSubmit={submit} className="rounded-lg bg-white/95 p-6 shadow-2xl shadow-indigo-950/30 backdrop-blur">
           <h2 className="text-2xl font-extrabold text-gray-950">Entrar</h2>
           <p className="mt-1 text-sm text-gray-500">Acesse com uma conta de demonstração.</p>
           <div className="mt-6 space-y-4">
@@ -270,8 +378,8 @@ function LoginPage() {
               ))}
             </div>
           </details>
-        </form>
-      </div>
+        </motion.form>
+      </motion.div>
     </div>
   );
 }
@@ -287,19 +395,19 @@ function DashboardPage() {
     ["Resolvidos hoje", metrics.resolved_today, CheckCircle2, "text-green-700 bg-green-50"]
   ];
   return (
-    <div className="space-y-6">
+    <MotionPage className="space-y-6">
       <PageTitle title="Dashboard" action={<Link to="/tickets/new"><Button><Plus size={16} /> Novo Chamado</Button></Link>} />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <motion.div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" variants={staggerContainer} initial="hidden" animate="visible">
         {cards.map(([label, value, Icon, tone]: any) => (
-          <div key={label} className="metric-card rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur">
+          <MotionCard key={label} className="metric-card rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur">
             <div className={cx("mb-4 flex h-11 w-11 items-center justify-center rounded-md", tone)}><Icon size={20} /></div>
             <div className="text-3xl font-extrabold text-gray-950">{value}</div>
             <div className="text-sm font-medium text-gray-500">{label}</div>
-          </div>
+          </MotionCard>
         ))}
-      </div>
+      </motion.div>
       <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
-        <div className="panel-card rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur">
+        <MotionCard className="panel-card rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur">
           <h3 className="font-bold text-gray-950">Chamados por status</h3>
           <div className="mt-5 space-y-3">
             {Object.entries(statusLabels).map(([key, label]) => {
@@ -308,15 +416,15 @@ function DashboardPage() {
               return <div key={key}><div className="mb-1 flex justify-between text-sm"><span>{label}</span><b>{value}</b></div><div className="h-2 overflow-hidden rounded-full bg-gray-100"><div className="progress-bar h-2 rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500" style={{ width: `${width}%` }} /></div></div>;
             })}
           </div>
-        </div>
-        <div className="panel-card rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur">
+        </MotionCard>
+        <MotionCard className="panel-card rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur">
           <h3 className="font-bold text-gray-950">Mais recentes</h3>
-          <div className="mt-4 space-y-3">
-            {metrics.recent.map((ticket: any) => <Link key={ticket.id} to={`/tickets/${ticket.id}`} className="list-card block rounded-md border border-gray-100 bg-white p-3 transition"><div className="font-mono text-sm font-bold text-indigo-700">{ticket.code}</div><div className="truncate text-sm font-semibold text-gray-800">{ticket.title}</div></Link>)}
-          </div>
-        </div>
+          <motion.div className="mt-4 space-y-3" variants={staggerContainer} initial="hidden" animate="visible">
+            {metrics.recent.map((ticket: any) => <MotionLink variants={cardVariants} whileHover={{ y: -2 }} key={ticket.id} to={`/tickets/${ticket.id}`} className="list-card block rounded-md border border-gray-100 bg-white p-3 transition"><div className="font-mono text-sm font-bold text-indigo-700">{ticket.code}</div><div className="truncate text-sm font-semibold text-gray-800">{ticket.title}</div></MotionLink>)}
+          </motion.div>
+        </MotionCard>
       </div>
-    </div>
+    </MotionPage>
   );
 }
 
@@ -337,31 +445,33 @@ function TicketsPage() {
   }
   useEffect(() => { load(); }, []);
   return (
-    <div className="space-y-5">
+    <MotionPage className="space-y-5">
       <PageTitle title={user?.role === "requester" ? "Meus Chamados" : "Todos os Chamados"} action={<Link to="/tickets/new"><Button><Plus size={16} /> Novo Chamado</Button></Link>} />
-      <div className="panel-card grid gap-3 rounded-lg border border-white/80 bg-white/90 p-4 shadow-sm backdrop-blur md:grid-cols-[1fr_160px_160px_220px_auto]">
+      <motion.div variants={ticketPanelVariants} initial="hidden" animate="visible" exit="exit" className="panel-card grid gap-3 rounded-lg border border-white/80 bg-white/90 p-4 shadow-sm backdrop-blur md:grid-cols-[1fr_160px_160px_220px_auto]">
         <div className="relative"><Search className="absolute left-3 top-2.5 text-gray-400" size={16} /><Input placeholder="Buscar por código ou título" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} className="pl-9" /></div>
         <Select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">Status</option>{Object.entries(statusLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
         <Select value={filters.priority} onChange={(e) => setFilters({ ...filters, priority: e.target.value })}><option value="">Prioridade</option>{Object.entries(priorityLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
         <Select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}><option value="">Categoria</option>{categories.map((c) => <option key={c}>{c}</option>)}</Select>
         <Button onClick={load} busy={loading}><SlidersHorizontal size={16} /> Filtrar</Button>
-      </div>
-      <div className="overflow-hidden rounded-lg border border-white/80 bg-white/90 shadow-sm backdrop-blur">
+      </motion.div>
+      <motion.div variants={ticketPanelVariants} initial="hidden" animate="visible" exit="exit" className="overflow-hidden rounded-lg border border-white/80 bg-white/90 shadow-sm backdrop-blur">
         <div className="hidden grid-cols-[130px_1fr_150px_130px_190px_180px] gap-4 border-b border-gray-100 bg-gray-50 px-4 py-3 text-xs font-bold uppercase text-gray-500 lg:grid">
           <span>Código</span><span>Título</span><span>Status</span><span>Prioridade</span><span>Responsável</span><span>SLA</span>
         </div>
-        {loading ? <TicketListSkeleton /> : tickets.length === 0 ? <EmptyState /> : tickets.map((ticket) => (
-          <Link key={ticket.id} to={`/tickets/${ticket.id}`} className="ticket-row grid gap-3 border-b border-gray-100 px-4 py-4 transition lg:grid-cols-[130px_1fr_150px_130px_190px_180px] lg:items-center">
+        <AnimatePresence mode="popLayout">
+        {loading ? <TicketListSkeleton /> : tickets.length === 0 ? <EmptyState /> : tickets.map((ticket, index) => (
+          <TableRowLink key={ticket.id} index={index} to={`/tickets/${ticket.id}`} className="ticket-row grid gap-3 border-b border-gray-100 px-4 py-4 transition lg:grid-cols-[130px_1fr_150px_130px_190px_180px] lg:items-center">
             <span className="font-mono text-sm font-extrabold text-indigo-700">{ticket.code}</span>
             <span className="min-w-0"><b className="block truncate text-sm text-gray-950">{ticket.title}</b><small className="text-gray-500">{ticket.category}</small></span>
             <StatusBadge status={ticket.status} />
             <PriorityBadge priority={ticket.priority} />
             <span className="text-sm text-gray-600">{ticket.assignee?.name || "Não atribuído"}</span>
             <span className={cx("text-sm font-semibold", ticket.is_overdue ? "text-red-700" : "text-gray-600")}>{ticket.is_overdue ? "ATRASADO" : formatDate(ticket.sla_deadline)}</span>
-          </Link>
+          </TableRowLink>
         ))}
-      </div>
-    </div>
+        </AnimatePresence>
+      </motion.div>
+    </MotionPage>
   );
 }
 
@@ -380,9 +490,9 @@ function NewTicketPage() {
     }
   }
   return (
-    <div className="mx-auto max-w-3xl">
+    <MotionPage className="mx-auto max-w-3xl">
       <PageTitle title="Novo Chamado" />
-      <form onSubmit={submit} className="panel-card mt-5 space-y-5 rounded-lg border border-white/80 bg-white/90 p-6 shadow-sm backdrop-blur">
+      <motion.form variants={cardVariants} initial="hidden" animate="visible" onSubmit={submit} className="panel-card mt-5 space-y-5 rounded-lg border border-white/80 bg-white/90 p-6 shadow-sm backdrop-blur">
         <label className="block text-sm font-semibold text-gray-700">Título<Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="mt-1" /></label>
         <label className="block text-sm font-semibold text-gray-700">Descrição<Textarea required rows={6} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1" /></label>
         <div className="grid gap-4 md:grid-cols-2">
@@ -390,8 +500,8 @@ function NewTicketPage() {
           <label className="block text-sm font-semibold text-gray-700">Prioridade<Select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="mt-1">{Object.entries(priorityLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></label>
         </div>
         <div className="flex flex-col justify-end gap-3 sm:flex-row"><Link to="/tickets"><Button type="button" variant="secondary">Cancelar</Button></Link><Button busy={loading}><Plus size={16} /> {loading ? "Abrindo..." : "Abrir Chamado"}</Button></div>
-      </form>
-    </div>
+      </motion.form>
+    </MotionPage>
   );
 }
 
@@ -404,6 +514,7 @@ function TicketDetailPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [comment, setComment] = useState("");
   const [busyAction, setBusyAction] = useState("");
+  const [confirmResolveOpen, setConfirmResolveOpen] = useState(false);
   const { toast, showToast } = useToast();
   const canEdit = user?.role === "admin" || user?.role === "attendant";
 
@@ -438,6 +549,7 @@ function TicketDetailPage() {
     setBusyAction("resolve");
     try {
       await patch("status", { status: "resolved" });
+      setConfirmResolveOpen(false);
       showToast("Chamado resolvido");
     } finally {
       setBusyAction("");
@@ -461,26 +573,26 @@ function TicketDetailPage() {
   if (!ticket) return <Skeleton title="Carregando chamado" />;
   const attendants = users.filter((u) => u.role === "attendant" || u.role === "admin");
   return (
-    <div className="space-y-5">
+    <MotionPage className="space-y-5">
       {toast}
       <PageTitle title={`${ticket.code} - ${ticket.title}`} />
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <section className="space-y-5">
-          <div className="panel-card rounded-lg border border-white/80 bg-white/90 p-6 shadow-sm backdrop-blur">
+          <MotionCard className="panel-card rounded-lg border border-white/80 bg-white/90 p-6 shadow-sm backdrop-blur">
             <div className="mb-4 flex flex-wrap gap-2"><StatusBadge status={ticket.status} /><PriorityBadge priority={ticket.priority} /></div>
             <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">{ticket.description}</p>
-          </div>
-          <div className="panel-card rounded-lg border border-white/80 bg-white/90 p-6 shadow-sm backdrop-blur">
+          </MotionCard>
+          <MotionCard className="panel-card rounded-lg border border-white/80 bg-white/90 p-6 shadow-sm backdrop-blur">
             <h3 className="flex items-center gap-2 font-bold text-gray-950"><MessageSquare size={18} /> Comentários</h3>
             <div className="mt-4 space-y-4">{comments.length === 0 ? <MiniEmpty label="Nenhum comentario ainda" /> : comments.map((c) => <div key={c.id} className="comment-card rounded-md bg-gray-50 p-4"><div className="text-sm font-bold">{c.author.name}</div><div className="mt-1 text-sm text-gray-700">{c.content}</div><div className="mt-2 text-xs text-gray-400">{relative(c.created_at)}</div></div>)}</div>
             <form onSubmit={addComment} className="mt-5 space-y-3"><Textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Escreva um comentário" /><Button busy={busyAction === "comment"}>Adicionar comentário</Button></form>
-          </div>
-          <div className="panel-card rounded-lg border border-white/80 bg-white/90 p-6 shadow-sm backdrop-blur">
+          </MotionCard>
+          <MotionCard className="panel-card rounded-lg border border-white/80 bg-white/90 p-6 shadow-sm backdrop-blur">
             <h3 className="font-bold text-gray-950">Histórico</h3>
             <div className="mt-4 space-y-3">{history.map((h) => <div key={h.id} className="history-item border-l-2 border-indigo-200 pl-4"><div className="text-sm font-semibold text-gray-800">{h.description}</div><div className="text-xs text-gray-500">{h.changed_by.name} - {relative(h.created_at)}</div></div>)}</div>
-          </div>
+          </MotionCard>
         </section>
-        <aside className="panel-card h-fit rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur xl:sticky xl:top-24">
+        <motion.aside variants={cardVariants} initial="hidden" animate="visible" className="panel-card h-fit rounded-lg border border-white/80 bg-white/90 p-5 shadow-sm backdrop-blur xl:sticky xl:top-24">
           <h3 className="font-bold text-gray-950">Detalhes</h3>
           {canEdit && (
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
@@ -490,7 +602,7 @@ function TicketDetailPage() {
                 </Button>
               )}
               {ticket.status !== "resolved" && ticket.status !== "cancelled" && (
-                <Button type="button" variant="secondary" busy={busyAction === "resolve"} onClick={resolveTicket}>
+                <Button type="button" variant="secondary" busy={busyAction === "resolve"} onClick={() => setConfirmResolveOpen(true)}>
                   <CheckCircle2 size={16} /> Resolver
                 </Button>
               )}
@@ -504,9 +616,18 @@ function TicketDetailPage() {
             <Field label="SLA"><span className={cx("text-sm font-bold", ticket.is_overdue ? "text-red-700" : "text-gray-700")}>{ticket.is_overdue ? "ATRASADO" : formatDate(ticket.sla_deadline)}</span></Field>
             <Field label="Abertura"><span className="text-sm text-gray-700">{formatDate(ticket.created_at)}</span></Field>
           </div>
-        </aside>
+        </motion.aside>
       </div>
-    </div>
+      <ConfirmModal
+        open={confirmResolveOpen}
+        title="Resolver chamado"
+        description="Confirme para marcar este chamado como resolvido. O historico sera atualizado automaticamente."
+        confirmLabel="Resolver"
+        busy={busyAction === "resolve"}
+        onCancel={() => setConfirmResolveOpen(false)}
+        onConfirm={resolveTicket}
+      />
+    </MotionPage>
   );
 }
 
@@ -541,20 +662,22 @@ function UsersPage() {
     }
   }
   return (
-    <div className="space-y-5">
+    <MotionPage className="space-y-5">
       {toast}
       <PageTitle title="Gerenciar Usuários" />
-      <form onSubmit={create} className="panel-card grid gap-3 rounded-lg border border-white/80 bg-white/90 p-4 shadow-sm backdrop-blur lg:grid-cols-[1fr_1fr_160px_160px_auto]">
+      <motion.form variants={cardVariants} initial="hidden" animate="visible" onSubmit={create} className="panel-card grid gap-3 rounded-lg border border-white/80 bg-white/90 p-4 shadow-sm backdrop-blur lg:grid-cols-[1fr_1fr_160px_160px_auto]">
         <Input placeholder="Nome" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <Input placeholder="Email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <Input placeholder="Senha" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}><option value="attendant">Atendente</option><option value="requester">Solicitante</option><option value="admin">Admin</option></Select>
         <Button busy={busyUser === "create"}><UserPlus size={16} /> Criar</Button>
-      </form>
-      <div className="overflow-hidden rounded-lg border border-white/80 bg-white/90 shadow-sm backdrop-blur">
-        {loading ? <TicketListSkeleton /> : users.map((u) => <div key={u.id} className="ticket-row grid gap-3 border-b border-gray-100 p-4 lg:grid-cols-[1fr_1fr_120px_100px_auto] lg:items-center"><div className="font-bold text-gray-900">{u.name}</div><div className="text-sm text-gray-600">{u.email}</div><Badge tone="bg-gray-100 text-gray-700">{u.role}</Badge><span className={cx("text-sm font-bold", u.is_active ? "text-green-700" : "text-red-700")}>{u.is_active ? "Ativo" : "Inativo"}</span><Button type="button" busy={busyUser === u.id} variant={u.is_active ? "secondary" : "success"} onClick={() => toggle(u.id)}>{u.is_active ? "Desativar" : <><UserCheck size={16} /> Ativar</>}</Button></div>)}
-      </div>
-    </div>
+      </motion.form>
+      <motion.div variants={cardVariants} initial="hidden" animate="visible" className="overflow-hidden rounded-lg border border-white/80 bg-white/90 shadow-sm backdrop-blur">
+        <AnimatePresence mode="popLayout">
+          {loading ? <TicketListSkeleton /> : users.map((u, index) => <motion.div layout custom={index} variants={tableRowVariants} initial="hidden" animate="visible" exit="exit" key={u.id} className="ticket-row grid gap-3 border-b border-gray-100 p-4 lg:grid-cols-[1fr_1fr_120px_100px_auto] lg:items-center"><div className="font-bold text-gray-900">{u.name}</div><div className="text-sm text-gray-600">{u.email}</div><Badge tone="bg-gray-100 text-gray-700">{u.role}</Badge><span className={cx("text-sm font-bold", u.is_active ? "text-green-700" : "text-red-700")}>{u.is_active ? "Ativo" : "Inativo"}</span><Button type="button" busy={busyUser === u.id} variant={u.is_active ? "secondary" : "success"} onClick={() => toggle(u.id)}>{u.is_active ? "Desativar" : <><UserCheck size={16} /> Ativar</>}</Button></motion.div>)}
+        </AnimatePresence>
+      </motion.div>
+    </MotionPage>
   );
 }
 
@@ -578,20 +701,72 @@ function MiniEmpty({ label }: { label: string }) {
   return <div className="rounded-md border border-dashed border-indigo-200 bg-indigo-50/50 p-4 text-sm font-semibold text-indigo-700"><Zap className="mr-2 inline" size={16} />{label}</div>;
 }
 
+function ConfirmModal({
+  open,
+  title,
+  description,
+  confirmLabel,
+  busy,
+  onCancel,
+  onConfirm
+}: {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
+          variants={modalBackdropVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          onClick={onCancel}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-modal-title"
+            className="w-full max-w-md rounded-lg border border-white/70 bg-white p-6 shadow-2xl shadow-indigo-950/20"
+            variants={modalPanelVariants}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+              <CheckCircle2 size={22} />
+            </div>
+            <h2 id="confirm-modal-title" className="text-lg font-extrabold text-gray-950">{title}</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600">{description}</p>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button type="button" variant="secondary" onClick={onCancel} disabled={busy}>Cancelar</Button>
+              <Button type="button" variant="success" busy={busy} onClick={onConfirm}>{confirmLabel}</Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function TicketListSkeleton() {
   return (
-    <div>
+    <motion.div variants={staggerContainer} initial="hidden" animate="visible">
       {[0, 1, 2, 3].map((item) => (
-        <div key={item} className="grid gap-3 border-b border-gray-100 px-4 py-4 lg:grid-cols-[130px_1fr_150px_130px_190px_180px]">
+        <motion.div key={item} variants={tableRowVariants} custom={item} className="grid gap-3 border-b border-gray-100 px-4 py-4 lg:grid-cols-[130px_1fr_150px_130px_190px_180px]">
           <div className="h-4 animate-shimmer rounded bg-gray-100" />
           <div className="h-4 animate-shimmer rounded bg-gray-100" />
           <div className="h-6 animate-shimmer rounded bg-gray-100" />
           <div className="h-6 animate-shimmer rounded bg-gray-100" />
           <div className="h-4 animate-shimmer rounded bg-gray-100" />
           <div className="h-4 animate-shimmer rounded bg-gray-100" />
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -604,10 +779,13 @@ function relative(value: string) {
 }
 
 export default function App() {
+  const location = useLocation();
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/*" element={<Protected><AppLayout /></Protected>} />
-    </Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname.startsWith("/login") ? "/login" : "/app"}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/*" element={<Protected><AppLayout /></Protected>} />
+      </Routes>
+    </AnimatePresence>
   );
 }
